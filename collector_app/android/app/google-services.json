@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "902374916444",
+    "firebase_url": "https://ecosync-3a5c1-default-rtdb.firebaseio.com",
+    "project_id": "ecosync-3a5c1",
+    "storage_bucket": "ecosync-3a5c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:902374916444:android:a25a04382da14896780199",
+        "android_client_info": {
+          "package_name": "com.example.collector_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBp24dhgoJyiaYcqkL54EnN8wZaWLTzygE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

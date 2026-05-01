@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EcoTrack Collector - Splash</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#2e394d",
+                        "secondary": "#88d899",
+                        "tertiary": "#ffdec4",
+                        "on-tertiary-fixed": "#2d1600",
+                        "tertiary-fixed-dim": "#fdb878",
+                        "inverse-primary": "#006d35",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#005226",
+                        "on-primary": "#003918",
+                        "outline": "#859585",
+                        "on-secondary-fixed": "#00210b",
+                        "surface-variant": "#2a3548",
+                        "primary": "#75ff9e",
+                        "on-secondary": "#003918",
+                        "surface-container-low": "#101c2e",
+                        "surface-container": "#142032",
+                        "secondary-container": "#02602d",
+                        "on-primary-container": "#00612e",
+                        "inverse-on-surface": "#253144",
+                        "surface-container-highest": "#2a3548",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed": "#ffdcbf",
+                        "on-surface": "#d7e3fc",
+                        "tertiary-container": "#ffba79",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#071325",
+                        "secondary-fixed": "#a3f5b3",
+                        "on-background": "#d7e3fc",
+                        "on-secondary-container": "#87d899",
+                        "outline-variant": "#3b4a3d",
+                        "on-primary-fixed": "#00210b",
+                        "on-tertiary-container": "#794810",
+                        "on-surface-variant": "#bacbb9",
+                        "error-container": "#93000a",
+                        "surface-tint": "#00e475",
+                        "on-primary-fixed-variant": "#005226",
+                        "primary-fixed": "#62ff96",
+                        "on-tertiary-fixed-variant": "#6a3c03",
+                        "on-tertiary": "#4b2800",
+                        "primary-fixed-dim": "#00e475",
+                        "inverse-surface": "#d7e3fc",
+                        "surface-container-high": "#1f2a3d",
+                        "surface-container-lowest": "#030e20",
+                        "secondary-fixed-dim": "#88d899",
+                        "background": "#071325",
+                        "primary-container": "#00e676",
+                        "surface": "#071325"
+                    },
+                    fontFamily: {
+                        "headline": ["Work Sans"],
+                        "body": ["Work Sans"],
+                        "label": ["Work Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #071325;
+            font-family: 'Work Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            min-height: max(884px, 100dvh);
+        }
+        .splash-bg {
+            background: radial-gradient(circle at center, #0D1F1A 0%, #071325 100%);
+        }
+        .dot-pattern {
+            background-image: radial-gradient(rgba(117, 255, 158, 0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        @keyframes glow-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.1); opacity: 0.6; }
+        }
+        .animate-glow {
+            animation: glow-pulse 6s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="dark overflow-hidden">
+<!-- Splash Screen Layout -->
+<main class="splash-bg min-h-screen w-full flex flex-col items-center justify-center p-8 relative">
+<!-- Background Pattern -->
+<div class="absolute inset-0 dot-pattern opacity-40 pointer-events-none"></div>
+<!-- Central Branding Cluster -->
+<div class="flex flex-col items-center justify-center space-y-12 max-w-md w-full relative z-10">
+<!-- Logo Mark with Animated Glow -->
+<div class="relative group">
+<!-- Refined Animated Glow -->
+<div class="absolute -inset-12 bg-primary/20 rounded-full blur-[60px] animate-glow"></div>
+<div class="absolute -inset-8 bg-primary/10 rounded-full blur-[40px] opacity-50 group-hover:opacity-100 transition duration-1000"></div>
+<div class="relative flex items-center justify-center bg-surface-container-high/60 backdrop-blur-sm w-32 h-32 rounded-3xl shadow-2xl border border-white/5">
+<span class="material-symbols-outlined text-primary text-7xl select-none" data-icon="eco" style="font-variation-settings: 'FILL' 1;">eco</span>
+</div>
+</div>
+<!-- Typography Content -->
+<div class="text-center space-y-6">
+<!-- Wordmark -->
+<h1 class="text-5xl font-black text-on-surface tracking-tighter uppercase leading-none">
+                    Eco <span class="text-primary">Track</span>
+</h1>
+<!-- Tagline -->
+<p class="text-on-surface-variant/80 text-lg md:text-xl font-medium tracking-widest uppercase">
+                    Your route. Your impact.
+                </p>
+</div>
+</div>
+<!-- Footer / Editorial Detail -->
+<div class="absolute bottom-16 flex flex-col items-center space-y-8 z-10">
+<!-- Loading Indicator (Refined Style) -->
+<div class="w-56 h-[2px] bg-white/5 rounded-full overflow-hidden">
+<div class="w-1/3 h-full bg-primary shadow-[0_0_8px_rgba(117,255,158,0.5)] rounded-full"></div>
+</div>
+<!-- Visual Token: Subtle Identity Marker -->
+<div class="flex items-center space-y-2 flex-col"><span class="text-[11px] uppercase tracking-[0.3em] font-semibold text-on-surface">Your route. Your impact.</span>
+<div class="flex space-x-3 mt-4">
+<div class="w-1 h-1 rounded-full bg-primary/60"></div>
+<div class="w-1 h-1 rounded-full bg-primary/30"></div>
+<div class="w-1 h-1 rounded-full bg-primary/10"></div>
+</div></div>
+</div>
+<!-- Background Image Accent: Abstract Texture (Reduced opacity for premium feel) -->
+<div class="absolute inset-0 z-0 opacity-[0.12] pointer-events-none overflow-hidden mix-blend-overlay">
+<img alt="" class="w-full h-full object-cover" data-alt="abstract close-up of dark green forest leaves with deep shadows and moody emerald lighting high-end editorial texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANcFH8mlroiOYOYg_Vym6m89c9sWyx4CMesnjsdnmmOVLVY9XBFCIwDFzXjXGeJT-fufK0SEZxmFlK6yrexoaXyym7IPxX1BM6id0lmIoHtbdjqfY-91zcq7KOfYH3KIvArBdVLRZLCZlURuGji9PbbZ6K3jUYPJhFhAV3marDDk7OaQADZ_3zMWHnx-byfCnE42R35B0OdAKRzfyJni8GxRT5cLFuL3jFo_4jEzkcP9AXGdu1WlNq-RJ7YxhxTj-GDZjiAxHzUS6b"/>
+</div>
+</main>
+</body></html>

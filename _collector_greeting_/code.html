@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-low": "#101c2e",
+              "on-tertiary-fixed-variant": "#6a3c03",
+              "background": "#071325",
+              "surface-container": "#142032",
+              "tertiary-container": "#ffba79",
+              "tertiary": "#ffdec4",
+              "surface-container-lowest": "#030e20",
+              "inverse-on-surface": "#253144",
+              "on-secondary": "#003918",
+              "secondary-fixed": "#a3f5b3",
+              "on-primary-fixed": "#00210b",
+              "on-error-container": "#ffdad6",
+              "secondary-fixed-dim": "#88d899",
+              "surface-container-highest": "#2a3548",
+              "on-error": "#690005",
+              "on-surface": "#d7e3fc",
+              "on-primary-container": "#00612e",
+              "surface-tint": "#00e475",
+              "on-primary": "#003918",
+              "inverse-surface": "#d7e3fc",
+              "on-surface-variant": "#bacbb9",
+              "on-primary-fixed-variant": "#005226",
+              "primary-fixed-dim": "#00e475",
+              "outline-variant": "#3b4a3d",
+              "primary-container": "#00e676",
+              "surface-variant": "#2a3548",
+              "surface-dim": "#071325",
+              "on-secondary-fixed": "#00210b",
+              "error": "#ffb4ab",
+              "on-secondary-container": "#87d899",
+              "on-background": "#d7e3fc",
+              "error-container": "#93000a",
+              "surface-bright": "#2e394d",
+              "primary": "#75ff9e",
+              "outline": "#859585",
+              "tertiary-fixed-dim": "#fdb878",
+              "on-tertiary-fixed": "#2d1600",
+              "surface": "#071325",
+              "inverse-primary": "#006d35",
+              "on-secondary-fixed-variant": "#005226",
+              "on-tertiary": "#4b2800",
+              "tertiary-fixed": "#ffdcbf",
+              "secondary-container": "#02602d",
+              "surface-container-high": "#1f2a3d",
+              "primary-fixed": "#62ff96",
+              "on-tertiary-container": "#794810",
+              "secondary": "#88d899"
+            },
+            fontFamily: {
+              "headline": ["Work Sans"],
+              "body": ["Work Sans"],
+              "label": ["Work Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0D1F1A; /* Deep forest dark background as requested */
+            font-family: 'Work Sans', sans-serif;
+            overflow: hidden;
+        }
+        .text-neon {
+            color: #00E676;
+        }
+        .bg-neon {
+            background-color: #00E676;
+        }
+        .premium-glow {
+            box-shadow: 0 0 40px rgba(0, 230, 118, 0.2);
+        }
+        .ambient-forest {
+            background: radial-gradient(circle at center, rgba(13, 31, 26, 0) 0%, rgba(7, 19, 37, 0.8) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-on-surface">
+<!-- Ambient Texture Layer -->
+<div class="absolute inset-0 ambient-forest pointer-events-none"></div>
+<div class="absolute inset-0 opacity-10" data-alt="Subtle texture of dark evergreen pine needles and forest floor shadows, atmospheric and moody"></div>
+<!-- Main Content Canvas -->
+<main class="relative z-10 text-center px-8">
+<!-- Center Greeting Section -->
+<section class="flex flex-col items-center gap-4">
+<!-- Focus Icon (Editorial Style) -->
+<div class="mb-8 opacity-40">
+<span class="material-symbols-outlined text-6xl text-neon" data-icon="recycling">recycling</span>
+</div>
+<h1 class="text-5xl md:text-7xl font-black tracking-tighter text-on-surface leading-none">
+                GOOD MORNING, COLLECTOR
+            </h1>
+<p class="text-xl md:text-2xl font-medium text-on-surface-variant tracking-wide mt-4 opacity-80">
+                Ready for today's route?
+            </p>
+</section>
+</main>
+<!-- Floating Action Button (FAB) -->
+<!-- Positioned in bottom right as per request -->
+<div class="fixed bottom-12 right-12 z-50 flex items-center gap-4">
+<span class="text-on-surface font-bold tracking-widest text-sm uppercase opacity-90">LIVE MAP</span>
+<button class="bg-neon text-on-primary w-20 h-20 rounded-full flex items-center justify-center premium-glow transition-all active:scale-95 hover:scale-105 shadow-2xl">
+<span class="material-symbols-outlined text-4xl" data-icon="map" data-weight="fill" style="font-variation-settings: 'FILL' 1;">map</span>
+</button>
+</div>
+<!-- Subtle Brand Identification -->
+<!-- Bottom Gradient for depth -->
+<div class="fixed bottom-0 left-0 w-full h-64 bg-gradient-to-t from-[#0D1F1A] to-transparent pointer-events-none"></div>
+</body></html>

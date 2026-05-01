@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ECO TRACK - LIVE MAP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-bright": "#2e394d",
+              "secondary": "#88d899",
+              "tertiary": "#ffdec4",
+              "on-tertiary-fixed": "#2d1600",
+              "tertiary-fixed-dim": "#fdb878",
+              "inverse-primary": "#006d35",
+              "on-error": "#690005",
+              "on-secondary-fixed-variant": "#005226",
+              "on-primary": "#003918",
+              "outline": "#859585",
+              "on-secondary-fixed": "#00210b",
+              "surface-variant": "#2a3548",
+              "primary": "#75ff9e",
+              "on-secondary": "#003918",
+              "surface-container-low": "#101c2e",
+              "surface-container": "#142032",
+              "secondary-container": "#02602d",
+              "on-primary-container": "#00612e",
+              "inverse-on-surface": "#253144",
+              "surface-container-highest": "#2a3548",
+              "on-error-container": "#ffdad6",
+              "tertiary-fixed": "#ffdcbf",
+              "on-surface": "#d7e3fc",
+              "tertiary-container": "#ffba79",
+              "error": "#ffb4ab",
+              "surface-dim": "#071325",
+              "secondary-fixed": "#a3f5b3",
+              "on-background": "#d7e3fc",
+              "on-secondary-container": "#87d899",
+              "outline-variant": "#3b4a3d",
+              "on-primary-fixed": "#00210b",
+              "on-tertiary-container": "#794810",
+              "on-surface-variant": "#bacbb9",
+              "error-container": "#93000a",
+              "surface-tint": "#00e475",
+              "on-primary-fixed-variant": "#005226",
+              "primary-fixed": "#62ff96",
+              "on-tertiary-fixed-variant": "#6a3c03",
+              "on-tertiary": "#4b2800",
+              "primary-fixed-dim": "#00e475",
+              "inverse-surface": "#d7e3fc",
+              "surface-container-high": "#1f2a3d",
+              "surface-container-lowest": "#030e20",
+              "secondary-fixed-dim": "#88d899",
+              "background": "#071325",
+              "primary-container": "#00e676",
+              "surface": "#071325"
+            },
+            fontFamily: {
+              "headline": ["Work Sans"],
+              "body": ["Work Sans"],
+              "label": ["Work Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .map-bg {
+        background: radial-gradient(circle at center, #142032 0%, #071325 100%);
+      }
+      /* Custom pulse for the truck icon */
+      @keyframes neon-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+        70% { box-shadow: 0 0 0 15px rgba(0, 230, 118, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+      }
+      .pulse-ring {
+        animation: neon-pulse 2s infinite;
+      }
+      .glass-card {
+        background: rgba(20, 32, 50, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface overflow-hidden h-screen w-screen flex flex-col">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-[#071325] flex justify-between items-center w-full px-6 py-4 max-w-none">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#00E676]" data-icon="navigation">navigation</span>
+<h1 class="font-['Work_Sans'] font-bold tracking-tight uppercase text-xl font-black text-[#00E676] tracking-widest">ECO TRACK</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-[#00E676]"></div>
+<span class="font-['Work_Sans'] font-bold tracking-tight uppercase text-[#00E676] text-xs">ONLINE</span>
+</div>
+<button class="w-[56px] h-[56px] flex items-center justify-center rounded-full bg-surface-container-high/50 hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-[#00E676]">
+<span class="material-symbols-outlined text-[#00E676] text-3xl" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Map Canvas (Full Bleed) -->
+<main class="relative flex-grow w-full h-full mt-0">
+<!-- Pseudo Map Interface -->
+<div class="absolute inset-0 z-0 map-bg overflow-hidden">
+<img class="w-full h-full object-cover opacity-40 mix-blend-luminosity filter contrast-125 grayscale" data-alt="top-down satellite view of dark urban city grid with high contrast black streets and dark grey blocks in a GTA style aesthetic" data-location="San Francisco" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3xiTmrHLF_-t68ZtN_DUtkNUXbo1t1q3VtVtVjxZZ9MQ3Jxwu69SS1NARTUlU0F8Bc1VZj1YFqI-F-HScZyfOOIihxZZitebYk2BinFvxBaeNl6RA5UcFdXLK9RoAnNl1eaMmLOOfHUS6FqPlN7Bd_qP3wqqLRgisiC4gYmnVGRg7uZX1aCzxR4aybBPu0Z8kAnTswSDx5ukaDUUnUi2RkHMdzATGGGjW5dIAjmP7TA-bdvAr4Tb4_ZvTGzzgcqUk3ffPYK3Vxlij"/>
+<!-- Map Vector Overlay (SVG for paths/routes) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+<!-- Grid lines -->
+<defs>
+<pattern height="100" id="grid" patternunits="userSpaceOnUse" width="100">
+<path d="M 100 0 L 0 0 0 100" fill="none" stroke="#1f2a3d" stroke-width="0.5"></path>
+</pattern>
+</defs>
+<rect fill="url(#grid)" height="100%" width="100%"></rect>
+<!-- Dotted Route Line -->
+<path class="opacity-80" d="M 450,600 Q 500,450 650,400" fill="none" stroke="#00E676" stroke-dasharray="8 8" stroke-width="3"></path>
+</svg>
+<!-- Truck Icon (Collector) -->
+<div class="absolute top-[60%] left-[45%] -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="pulse-ring bg-primary-container p-3 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+</div>
+</div>
+<!-- Target Pin -->
+<div class="absolute top-[40%] left-[65%] -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-[#00E676] text-4xl drop-shadow-[0_0_10px_rgba(0,230,118,0.8)]" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+<!-- Distant Pin -->
+<div class="absolute top-[25%] left-[30%] -translate-x-1/2 -translate-y-1/2 z-10 opacity-40">
+<span class="material-symbols-outlined text-[#00E676] text-3xl" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+</main>
+<!-- Platform Indicator (Bottom Home Bar Style) -->
+<footer class="w-full py-2 bg-surface flex justify-center items-center">
+<div class="w-24 h-1 bg-surface-container-highest rounded-full"></div>
+</footer>
+</body></html>

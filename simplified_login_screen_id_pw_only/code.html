@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Eco Track - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed-dim": "#00e475",
+              "on-error": "#690005",
+              "background": "#071325",
+              "surface-container": "#142032",
+              "on-tertiary-fixed": "#2d1600",
+              "outline": "#859585",
+              "tertiary-fixed": "#ffdcbf",
+              "surface-container-highest": "#2a3548",
+              "inverse-primary": "#006d35",
+              "surface-tint": "#00e475",
+              "on-secondary": "#003918",
+              "surface-dim": "#071325",
+              "surface-container-lowest": "#030e20",
+              "on-error-container": "#ffdad6",
+              "inverse-on-surface": "#253144",
+              "secondary-container": "#02602d",
+              "error": "#ffb4ab",
+              "on-background": "#d7e3fc",
+              "surface-bright": "#2e394d",
+              "on-primary": "#003918",
+              "primary-container": "#00e676",
+              "on-surface-variant": "#bacbb9",
+              "secondary-fixed-dim": "#88d899",
+              "surface-container-low": "#101c2e",
+              "on-primary-fixed-variant": "#005226",
+              "on-tertiary-container": "#794810",
+              "primary-fixed": "#62ff96",
+              "on-primary-container": "#00612e",
+              "on-surface": "#d7e3fc",
+              "tertiary-container": "#ffba79",
+              "surface": "#071325",
+              "on-tertiary": "#4b2800",
+              "tertiary": "#ffdec4",
+              "outline-variant": "#3b4a3d",
+              "surface-variant": "#2a3548",
+              "on-tertiary-fixed-variant": "#6a3c03",
+              "secondary-fixed": "#a3f5b3",
+              "inverse-surface": "#d7e3fc",
+              "on-secondary-fixed": "#00210b",
+              "primary": "#75ff9e",
+              "tertiary-fixed-dim": "#fdb878",
+              "secondary": "#88d899",
+              "on-secondary-container": "#87d899",
+              "surface-container-high": "#1f2a3d",
+              "on-primary-fixed": "#00210b",
+              "error-container": "#93000a",
+              "on-secondary-fixed-variant": "#005226"
+            },
+            fontFamily: {
+              "headline": ["Work Sans"],
+              "body": ["Work Sans"],
+              "label": ["Work Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background-color: #071325;
+            color: #d7e3fc;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden relative">
+<!-- Subtle Background Element -->
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<!-- Login Container -->
+<div class="w-full max-w-md space-y-12 z-10">
+<!-- Brand Header (TopAppBar Reference) -->
+<header class="flex flex-col items-center space-y-4">
+<div class="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center shadow-2xl">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="eco">eco</span>
+</div>
+<div class="text-center">
+<h1 class="text-3xl font-black text-primary uppercase tracking-widest font-headline">Eco Track</h1>
+<p class="text-on-surface-variant text-sm tracking-wide mt-2 font-medium">Your route. Your impact.</p>
+</div>
+</header>
+<!-- Form Section -->
+<main class="space-y-10">
+<div class="space-y-8">
+<!-- Full Name Field -->
+<!-- Collector ID Field -->
+<div class="relative group">
+<div class="flex items-center space-x-4 mb-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="badge">badge</span>
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Collector ID</label>
+</div>
+<input class="w-full bg-surface-container-low border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 text-on-surface placeholder:text-on-surface-variant/30 py-4 px-2 transition-all duration-300 font-medium" placeholder="ID-000-000" type="text"/>
+</div>
+<!-- Password Field -->
+<div class="relative group">
+<div class="flex items-center space-x-4 mb-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="lock">lock</span>
+<label class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Password</label>
+</div>
+<input class="w-full bg-surface-container-low border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 text-on-surface placeholder:text-on-surface-variant/30 py-4 px-2 transition-all duration-300 font-medium" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Login Button -->
+<div class="pt-4">
+<button class="w-full h-16 bg-gradient-to-br from-primary to-primary-container text-on-primary font-black text-lg tracking-[0.2em] rounded-xl shadow-[0_10px_30px_rgba(0,230,118,0.2)] active:scale-[0.98] transition-all duration-200 uppercase flex items-center justify-center space-x-3">
+<span>LOGIN</span>
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- Footer Note -->
+<footer class="text-center pt-8">
+<div class="bg-surface-container-low/50 backdrop-blur-sm p-6 rounded-2xl border border-outline-variant/10">
+<p class="text-on-surface-variant text-xs leading-relaxed tracking-wider">
+                    Don't have an account? <br/>
+<span class="text-on-surface font-bold mt-1 block uppercase">Contact your supervisor.</span>
+</p>
+</div>
+</footer>
+</div>
+<!-- Decorative Image Layer (Editorial Feel) -->
+<div class="fixed bottom-0 left-0 w-full h-1/4 opacity-10 pointer-events-none">
+<div class="w-full h-full bg-cover bg-center" data-alt="abstract close-up of high-tech circuit patterns with glowing neon green lines on a deep obsidian black background representing digital tracking" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCQabzu4RtDv28XaHciH83jBoGfGHgaRX1008u3nHpnhYYUhJsSV_ynY97C5AvBxf6WlIDW6J1oRCGA3I2py-odaREtCn8dBkC9i03HqPkSqNkl_I-TF3R5QN4o62s1UVsjvuNIpJ7KH4SJ-bFaNVda2pt8Ugz5r5CEOILqJ9JnuGqZh_lMBxOq1WT_Z8yXqg0lxnmY3-hWX-E6-FECKpLzXKndhIx64pjtDxpy7YG3l_CEmt-WE2P0cvWzM2-IsExAyAZAl1AUkDsz');">
+</div>
+</div>
+</body></html>
