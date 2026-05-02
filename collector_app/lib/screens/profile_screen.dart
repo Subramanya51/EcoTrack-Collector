@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -10,6 +11,23 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _obscurePassword = true;
+  final AuthService _authService = AuthService();
+  String _collectorId = "Loading...";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollectorId();
+  }
+
+  Future<void> _loadCollectorId() async {
+    final id = await _authService.getCollectorId();
+    if (mounted) {
+      setState(() {
+        _collectorId = id ?? "UNKNOWN";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +112,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: const Row(
                           children: [
                             Text(
-                              'ET-4829-9910',
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFD7E3FC), letterSpacing: 3),
+                              _collectorId,
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFD7E3FC), letterSpacing: 3),
                             ),
                           ],
                         ),
@@ -159,7 +177,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(24),
-                onTap: () => Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false),
+              onTap: () async {
+                await _authService.logout();
+                if (mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                }
+              },
                 child: const SizedBox(
                   width: double.infinity,
                   height: 80,

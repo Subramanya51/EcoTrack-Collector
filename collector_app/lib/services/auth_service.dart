@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class AuthService {
   static const String baseUrl = 'https://ecotrack-rm92.onrender.com';
@@ -38,7 +39,7 @@ class AuthService {
           // If not JSON, use raw body
         }
 
-        await _saveToken(token);
+        await _saveToken(token, collectorId);
         return token;
       } else {
         print('Login failed with status: ${response.statusCode}');
@@ -51,9 +52,15 @@ class AuthService {
     }
   }
 
-  Future<void> _saveToken(String token) async {
+  Future<void> _saveToken(String token, String collectorId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', token);
+    await prefs.setString('collector_id', collectorId);
+  }
+
+  Future<String?> getCollectorId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('collector_id');
   }
 
   Future<String?> getToken() async {
@@ -63,6 +70,19 @@ class AuthService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final collectorId = prefs.getString('collector_id');
+    
+    if (collectorId != null) {
+      try {
+        await FirebaseDatabase.instance
+            .ref('Collector_Locations/$collectorId')
+            .update({'status': 'OFFLINE'});
+      } catch (e) {
+        print('Error setting offline status on logout: $e');
+      }
+    }
+
     await prefs.remove('jwt_token');
+    await prefs.remove('collector_id');
   }
 }

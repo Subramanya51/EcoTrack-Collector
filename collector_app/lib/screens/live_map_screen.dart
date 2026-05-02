@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'dart:async';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
 class LiveMapScreen extends StatefulWidget {
@@ -15,16 +16,84 @@ class LiveMapScreen extends StatefulWidget {
 class _LiveMapScreenState extends State<LiveMapScreen> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
   LatLng _currentLocation = const LatLng(37.7749, -122.4194); // Default to SF
-  final String _directionsApiKey = "AIzaSyD2D4qTJ9P_I4Ov1Rot6W6oo1FRWKg41c4";
-  final String _routesApiKey = "AIzaSyD2D4qTJ9P_I4Ov1Rot6W6oo1FRWKg41c4";
+  StreamSubscription<Position>? _locationSubscription;
+  String? _collectorId;
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
     _initLocation();
     _listenToPickupPoints();
+    _startLocationTracking();
+  }
+
+  @override
+  void dispose() {
+    _setOfflineStatus();
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _setOfflineStatus() async {
+    if (_collectorId == null) return;
+    try {
+      await FirebaseDatabase.instance
+          .ref('Collector_Locations/$_collectorId')
+          .update({'status': 'OFFLINE'});
+      print('--- Status set to OFFLINE in RTDB for $_collectorId ---');
+    } catch (e) {
+      print('--- Error setting offline status in RTDB: $e ---');
+    }
+  }
+
+  Future<void> _startLocationTracking() async {
+    _collectorId = await _authService.getCollectorId();
+    if (_collectorId == null) {
+      print('--- ERROR: No Collector ID found in SharedPreferences! ---');
+      print('--- ACTION REQUIRED: Please log out and log in again to save your ID. ---');
+      return;
+    }
+
+    print('--- SUCCESS: Collector ID "$_collectorId" fetched. Starting stream... ---');
+
+    // Subscribe to location updates
+    _locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5, // Update every 5 meters
+      ),
+    ).listen((Position position) {
+      if (mounted) {
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+        });
+      }
+      _updateLocationInFirestore(position);
+    });
+  }
+
+  Future<void> _updateLocationInFirestore(Position position) async {
+    if (_collectorId == null) return;
+
+    try {
+      print('--- SYNCING TO RTDB: Collector/$_collectorId at (${position.latitude}, ${position.longitude}) ---');
+      await FirebaseDatabase.instance
+          .ref('Collector_Locations/$_collectorId')
+          .update({
+        'collectorId': _collectorId,
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'status': 'ONLINE',
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'timestamp': ServerValue.timestamp,
+      });
+      
+      print('--- RTDB UPDATE SUCCESSFUL ---');
+    } catch (e) {
+      print('--- RTDB UPDATE FAILED: $e ---');
+    }
   }
 
   Future<void> _initLocation() async {
@@ -74,6 +143,9 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           _mapController?.animateCamera(
             CameraUpdate.newLatLngZoom(_currentLocation, 14.0),
           );
+          
+          // Initial sync to RTDB so node appears immediately
+          _updateLocationInFirestore(pos);
         }
       } else {
         print('--- Could not determine location. Moving camera to first pickup point... ---');
@@ -83,15 +155,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           );
         }
       }
-
-      // Always try to calculate route if we have markers
-      if (_markers.isNotEmpty) {
-        _getRoute();
-      }
     } catch (e) {
       print('--- Error getting location: $e ---');
-      // Still try to get route if markers exist
-      if (_markers.isNotEmpty) _getRoute();
     }
   }
 
@@ -142,7 +207,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         // Auto-zoom to markers if we are stuck at default location
         if (_markers.isNotEmpty) {
           _zoomToFitMarkers();
-          _getRoute();
         }
       }
     }, onError: (error) {
@@ -176,56 +240,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     );
   }
 
-  Future<void> _getRoute() async {
-    if (_markers.isEmpty) return;
-    
-    print('--- Calculating Optimized Route with Routes API ---');
-    PolylinePoints polylinePoints = PolylinePoints(apiKey: _routesApiKey);
-    
-    LatLng origin = _currentLocation;
-    if (origin.latitude == 37.7749 && _markers.isNotEmpty) {
-      origin = _markers.first.position;
-    }
-
-    List<PolylineWayPoint> wayPoints = _markers.where((m) => m.position != origin).map((m) => 
-      PolylineWayPoint(location: "${m.position.latitude},${m.position.longitude}")
-    ).toList();
-
-    try {
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        request: PolylineRequest(
-          origin: PointLatLng(origin.latitude, origin.longitude),
-          destination: PointLatLng(_markers.last.position.latitude, _markers.last.position.longitude),
-          mode: TravelMode.driving,
-          wayPoints: wayPoints,
-          optimizeWaypoints: true,
-        ),
-      );
-
-      if (result.points.isNotEmpty) {
-        print('--- Route Found: ${result.points.length} points ---');
-        List<LatLng> coords = result.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
-        
-        if (mounted) {
-          setState(() {
-            _polylines = {
-              Polyline(
-                polylineId: const PolylineId("route"),
-                color: const Color(0xFF00E676),
-                points: coords,
-                width: 6,
-              )
-            };
-          });
-        }
-      } else {
-        print('--- Route Error: ${result.errorMessage} ---');
-      }
-    } catch (e) {
-      print('--- Exception in _getRoute: $e ---');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CustomColors>()!;
@@ -243,7 +257,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               ),
               onMapCreated: (controller) => _mapController = controller,
               markers: _markers,
-              polylines: _polylines,
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
@@ -319,7 +332,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _initLocation();
-          _getRoute();
         },
         backgroundColor: const Color(0xFF00E676),
         child: const Icon(Icons.my_location, color: Color(0xFF071325)),
