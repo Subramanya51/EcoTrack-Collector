@@ -4,9 +4,9 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:label="collector_app"
+        android:label="Eco Dispatch"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="true">
 
         <!-- TODO: Replace "YOUR_API_KEY_HERE" with your actual Google Maps API Key -->

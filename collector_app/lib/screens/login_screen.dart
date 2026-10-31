@@ -29,15 +29,23 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final token = await _authService.login(collectorId, password);
+      final result = await _authService.login(collectorId, password);
       
       if (!mounted) return;
 
-      if (token != null) {
+      if (result['success'] == true) {
         Navigator.pushReplacementNamed(context, '/greeting');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please check your credentials.')),
+          SnackBar(
+            content: Text(result['error'] ?? 'Login failed. Please check your credentials.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An unexpected error occurred: $e')),
         );
       }
     } finally {
@@ -108,11 +116,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             shape: BoxShape.circle,
                             boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10))],
                           ),
-                          child: const Icon(Icons.eco, color: Color(0xFF75FF9E), size: 36),
+                          child: ClipOval(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Image.asset(
+                                'assets/icon/app_logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'ECO TRACK',
+                          'ECO DISPATCH',
                           style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF75FF9E), letterSpacing: 3),
                         ),
                         const SizedBox(height: 8),

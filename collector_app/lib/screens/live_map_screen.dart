@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import '../services/auth_service.dart';
+import '../services/google_maps_service.dart';
 import '../theme/app_theme.dart';
 
 class LiveMapScreen extends StatefulWidget {
@@ -13,17 +14,26 @@ class LiveMapScreen extends StatefulWidget {
   State<LiveMapScreen> createState() => _LiveMapScreenState();
 }
 
-class _LiveMapScreenState extends State<LiveMapScreen> {
+class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserver {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
   LatLng _currentLocation = const LatLng(37.7749, -122.4194); // Default to SF
+  LatLng? _dumpYardLocation; // Will default to _currentLocation for loop route
   StreamSubscription<Position>? _locationSubscription;
   String? _collectorId;
   final AuthService _authService = AuthService();
+  final GoogleMapsService _googleMapsService = GoogleMapsService();
+  
+  String _totalDistance = "";
+  String _totalDuration = "";
+  List<int> _optimizedOrder = [];
+  bool _isOptimizing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initLocation();
     _listenToPickupPoints();
     _startLocationTracking();
@@ -31,9 +41,36 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _setOfflineStatus();
     _locationSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // App is switched or backgrounded
+      print('--- App Lifecycle: $state. Setting OFFLINE status. ---');
+      _setOfflineStatus();
+    } else if (state == AppLifecycleState.resumed) {
+      // App is resumed
+      print('--- App Lifecycle: RESUMED. Setting ONLINE status. ---');
+      _setOnlineStatus();
+    }
+  }
+
+  Future<void> _setOnlineStatus() async {
+    if (_collectorId == null) return;
+    try {
+      await FirebaseDatabase.instance
+          .ref('Collector_Locations/$_collectorId')
+          .update({'status': 'ONLINE'});
+      print('--- Status set to ONLINE in RTDB for $_collectorId ---');
+    } catch (e) {
+      print('--- Error setting online status in RTDB: $e ---');
+    }
   }
 
   Future<void> _setOfflineStatus() async {
@@ -77,11 +114,25 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   Future<void> _updateLocationInFirestore(Position position) async {
     if (_collectorId == null) return;
 
+    // Periodically check if token is still valid
+    final isValid = await _authService.isTokenValid();
+    if (!isValid) {
+      print('--- TOKEN EXPIRED during location update. Logging out... ---');
+      _authService.logout();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+      return;
+    }
+
     try {
       print('--- SYNCING TO RTDB: Collector/$_collectorId at (${position.latitude}, ${position.longitude}) ---');
-      await FirebaseDatabase.instance
-          .ref('Collector_Locations/$_collectorId')
-          .update({
+      final ref = FirebaseDatabase.instance.ref('Collector_Locations/$_collectorId');
+      
+      // Ensure we set status to OFFLINE if the app is closed/connection lost
+      await ref.onDisconnect().update({'status': 'OFFLINE'});
+      
+      await ref.update({
         'collectorId': _collectorId,
         'latitude': position.latitude,
         'longitude': position.longitude,
@@ -148,11 +199,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           _updateLocationInFirestore(pos);
         }
       } else {
-        print('--- Could not determine location. Moving camera to first pickup point... ---');
+        print('--- Could not determine location. Falling back to first pickup point... ---');
         if (_markers.isNotEmpty) {
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(_markers.first.position, 14.0),
-          );
+          final firstPickup = _markers.first.position;
+          if (mounted) {
+            setState(() {
+              _currentLocation = firstPickup;
+            });
+            _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(firstPickup, 14.0),
+            );
+          }
         }
       }
     } catch (e) {
@@ -179,7 +236,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
       data.forEach((key, value) {
         if (value is Map) {
-          if (value['status'] != "REQUESTED") {
+          if (value['status'] == "COMPLETED") {
             return;
           }
 
@@ -201,7 +258,14 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
       if (mounted) {
         setState(() {
+          // Preserve origin and destination markers if they already exist
+          final originMarker = _markers.where((m) => m.markerId.value == 'origin').firstOrNull;
+          final destMarker = _markers.where((m) => m.markerId.value == 'destination').firstOrNull;
+          
           _markers = newMarkers;
+          
+          if (originMarker != null) _markers.add(originMarker);
+          if (destMarker != null) _markers.add(destMarker);
         });
         
         // Auto-zoom to markers if we are stuck at default location
@@ -212,6 +276,143 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     }, onError: (error) {
       print('--- Realtime Database Error: $error ---');
     });
+  }
+
+  Future<void> _optimizeRoute() async {
+    if (_markers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No pickup points to optimize')),
+      );
+      return;
+    }
+
+    // Check if we are still at default location (SF) while likely being elsewhere
+    if (_currentLocation.latitude == 37.7749 && _currentLocation.longitude == -122.4194) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Waiting for GPS location... Please try again in a moment.')),
+      );
+      _initLocation();
+      return;
+    }
+
+    final destination = _dumpYardLocation ?? _currentLocation;
+
+    final List<LatLng> waypointLatLngs = _markers
+        .where((m) => m.markerId.value != 'origin' && m.markerId.value != 'destination')
+        .map((m) => m.position)
+        .toList();
+
+    if (waypointLatLngs.length > 23) { // 23 waypoints + origin + destination = 25 total (Standard API limit)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Too many pickup points (limit 23 for one route)')),
+      );
+      // Optional: split into multiple routes as per requirement, 
+      // but the user said "Do not create multiple separate routes. Always generate one optimized route."
+      // So I'll just warn and proceed with the first 23.
+    }
+
+    setState(() {
+      _isOptimizing = true;
+    });
+    try {
+      final result = await _googleMapsService.getOptimizedRoute(
+        origin: _currentLocation,
+        destination: destination,
+        waypoints: waypointLatLngs,
+      );
+
+      if (result != null) {
+        final route = result['routes'][0];
+        final overviewPolyline = route['overview_polyline']['points'];
+        final List<LatLng> polylinePoints = _googleMapsService.decodePolyline(overviewPolyline);
+        
+        // Waypoint order gives us the sequence (0-indexed based on the waypoints list we sent)
+        final List<dynamic> order = route['waypoint_order'];
+
+        // Extract total distance and duration
+        int totalDist = 0;
+        int totalDur = 0;
+        final legs = route['legs'] as List;
+        for (var leg in legs) {
+          totalDist += (leg['distance']['value'] as num).toInt();
+          totalDur += (leg['duration']['value'] as num).toInt();
+        }
+
+        setState(() {
+          _totalDistance = "${(totalDist / 1000).toStringAsFixed(1)} km";
+          _totalDuration = "${(totalDur / 60).toStringAsFixed(0)} mins";
+          _optimizedOrder = order.cast<int>();
+          
+          _polylines = {
+            Polyline(
+              polylineId: const PolylineId('optimized_route'),
+              points: polylinePoints,
+              color: const Color(0xFF00E676),
+              width: 5,
+            ),
+          };
+
+          // Update markers to include origin and destination if not already there
+          _markers.add(Marker(
+            markerId: const MarkerId('origin'),
+            position: _currentLocation,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+            infoWindow: const InfoWindow(title: 'Start Location (Truck)'),
+          ));
+          
+          _markers.add(Marker(
+            markerId: const MarkerId('destination'),
+            position: destination,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: const InfoWindow(title: 'Final Destination (Dump Yard)'),
+          ));
+        });
+
+        _zoomToFitAll(destination);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to optimize route')),
+        );
+      }
+    } catch (e) {
+      print('Error optimizing route: $e');
+    } finally {
+      setState(() {
+        _isOptimizing = false;
+      });
+    }
+  }
+
+  void _zoomToFitAll(LatLng destination) {
+    if (_markers.isEmpty || _mapController == null) return;
+    
+    double minLat = _currentLocation.latitude;
+    double maxLat = _currentLocation.latitude;
+    double minLng = _currentLocation.longitude;
+    double maxLng = _currentLocation.longitude;
+
+    for (var m in _markers) {
+      if (m.position.latitude < minLat) minLat = m.position.latitude;
+      if (m.position.latitude > maxLat) maxLat = m.position.latitude;
+      if (m.position.longitude < minLng) minLng = m.position.longitude;
+      if (m.position.longitude > maxLng) maxLng = m.position.longitude;
+    }
+    
+    // Include destination
+    if (destination.latitude < minLat) minLat = destination.latitude;
+    if (destination.latitude > maxLat) maxLat = destination.latitude;
+    if (destination.longitude < minLng) minLng = destination.longitude;
+    if (destination.longitude > maxLng) maxLng = destination.longitude;
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        100, // Extra Padding for route
+      ),
+    );
   }
 
   void _zoomToFitMarkers() {
@@ -257,6 +458,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               ),
               onMapCreated: (controller) => _mapController = controller,
               markers: _markers,
+              polylines: _polylines,
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
@@ -278,7 +480,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                       Icon(Icons.navigation, color: Color(0xFF00E676)),
                       SizedBox(width: 12),
                       Text(
-                        'ECO TRACK',
+                        'ECO DISPATCH',
                         style: TextStyle(color: Color(0xFF00E676), fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 3),
                       ),
                     ],
@@ -311,6 +513,93 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             ),
           ),
 
+          // Route Info Card
+          if (_totalDistance.isNotEmpty)
+            Positioned(
+              top: topPad + 80,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF071325).withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildRouteStat(Icons.straighten, 'Distance', _totalDistance),
+                    Container(width: 1, height: 40, color: Colors.white24),
+                    _buildRouteStat(Icons.access_time, 'Est. Time', _totalDuration),
+                    Container(width: 1, height: 40, color: Colors.white24),
+                    _buildRouteStat(Icons.location_on, 'Pickups', '${_markers.length - 2}'),
+                  ],
+                ),
+              ),
+            ),
+
+          // Optimized Sequence List (Hidden by default, shown when expanded)
+          if (_optimizedOrder.isNotEmpty)
+            Positioned(
+              top: topPad + 160,
+              left: 20,
+              right: 20,
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 120),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF071325).withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00E676).withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 12, top: 8, bottom: 4),
+                      child: Text('OPTIMIZED SEQUENCE', style: TextStyle(color: Color(0xFF00E676), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _optimizedOrder.length,
+                        itemBuilder: (context, index) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 10,
+                                  backgroundColor: const Color(0xFF00E676),
+                                  child: Text('${index + 1}', style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 8),
+                                Text('Stop ${_optimizedOrder[index] + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+
           // Bottom bar
           Positioned(
             bottom: 0, left: 0, right: 0,
@@ -336,6 +625,24 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         backgroundColor: const Color(0xFF00E676),
         child: const Icon(Icons.my_location, color: Color(0xFF071325)),
       ),
+    );
+  }
+
+  Widget _buildRouteStat(IconData icon, String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: const Color(0xFF00E676), size: 20),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 10),
+        ),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

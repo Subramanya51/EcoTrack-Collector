@@ -24,14 +24,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _checkAuth() async {
-    final token = await _authService.getToken();
+    final isValid = await _authService.isTokenValid();
     
     await Future.delayed(const Duration(seconds: 4));
     
     if (mounted) {
-      if (token != null) {
+      if (isValid) {
         Navigator.pushReplacementNamed(context, '/greeting');
       } else {
+        // If token is invalid or expired, make sure we clear local data
+        await _authService.logout();
         Navigator.pushReplacementNamed(context, '/login');
       }
     }
@@ -114,8 +116,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10)),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(Icons.eco, color: Color(0xFF75FF9E), size: 72),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/icon/app_logo.png',
+                          width: 128,
+                          height: 128,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ],
@@ -126,7 +134,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -2),
                     children: [
                       TextSpan(text: 'ECO ', style: TextStyle(color: Color(0xFFD7E3FC))),
-                      TextSpan(text: 'TRACK', style: TextStyle(color: Color(0xFF75FF9E))),
+                      TextSpan(text: 'DISPATCH', style: TextStyle(color: Color(0xFF75FF9E))),
                     ],
                   ),
                 ),

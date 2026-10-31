@@ -44,7 +44,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title: const Text(
           'Collector Profile',
-          style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold, letterSpacing: -0.5),
+          style: TextStyle(
+            color: Color(0xFF00E676),
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.5,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -53,24 +57,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             // Avatar ring
             Container(
-              width: 128, height: 128,
+              width: 128,
+              height: 128,
               decoration: BoxDecoration(
                 color: colors.surfaceContainerHigh,
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0x3300E676), width: 2),
-                boxShadow: const [BoxShadow(color: Color(0x1A00E676), blurRadius: 50)],
+                boxShadow: const [
+                  BoxShadow(color: Color(0x1A00E676), blurRadius: 50),
+                ],
               ),
-              child: const Icon(Icons.account_circle, color: Color(0xFF00E676), size: 80),
+              child: const Icon(
+                Icons.account_circle,
+                color: Color(0xFF00E676),
+                size: 80,
+              ),
             ),
             const SizedBox(height: 24),
             const Text(
               'Active Collector',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFFD7E3FC)),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFD7E3FC),
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
               'AUTHORIZED PERSONNEL ONLY',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2, color: Color(0xFFBACBB9)),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                color: Color(0xFFBACBB9),
+              ),
             ),
             const SizedBox(height: 48),
 
@@ -84,7 +104,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   end: Alignment.bottomRight,
                   colors: [Color(0xCC142032), Color(0xE6101C2E)],
                 ),
-                boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 30, offset: Offset(0, 10))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black45,
+                    blurRadius: 30,
+                    offset: Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -98,7 +124,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SizedBox(width: 16),
                           Text(
                             'COLLECTOR ID',
-                            style: TextStyle(color: Color(0xFFBACBB9), fontWeight: FontWeight.w600, letterSpacing: 2),
+                            style: TextStyle(
+                              color: Color(0xFFBACBB9),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 2,
+                            ),
                           ),
                         ],
                       ),
@@ -109,11 +139,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: const Color(0x80101C2E),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Text(
                               _collectorId,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFD7E3FC), letterSpacing: 3),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD7E3FC),
+                                letterSpacing: 3,
+                              ),
                             ),
                           ],
                         ),
@@ -132,13 +167,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SizedBox(width: 16),
                           Text(
                             'PASSWORD',
-                            style: TextStyle(color: Color(0xFFBACBB9), fontWeight: FontWeight.w600, letterSpacing: 2),
+                            style: TextStyle(
+                              color: Color(0xFFBACBB9),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 2,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0x80101C2E),
                           borderRadius: BorderRadius.circular(16),
@@ -149,14 +191,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(
                               _obscurePassword ? '••••••••' : 'EC0-SECURE-88',
                               style: const TextStyle(
-                                fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFD7E3FC), letterSpacing: 3),
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD7E3FC),
+                                letterSpacing: 3,
+                              ),
                             ),
                             IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 color: const Color(0xFF00E676),
                               ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                             ),
                           ],
                         ),
@@ -177,12 +227,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(24),
-              onTap: () async {
-                await _authService.logout();
-                if (mounted) {
-                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-                }
-              },
+                onTap: () async {
+                  await _authService.logout();
+                  if (mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
+                  }
+                },
                 child: const SizedBox(
                   width: double.infinity,
                   height: 80,
@@ -193,7 +247,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SizedBox(width: 16),
                       Text(
                         'LOGOUT',
-                        style: TextStyle(color: Color(0xFFFFB4AB), fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: 3),
+                        style: TextStyle(
+                          color: Color(0xFFFFB4AB),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
+                          letterSpacing: 3,
+                        ),
                       ),
                     ],
                   ),
@@ -203,7 +262,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 32),
             const Text(
               'SESSION ID: 4829-9910-AA21',
-              style: TextStyle(color: Color(0x66BACBB9), fontSize: 10, letterSpacing: 2),
+              style: TextStyle(
+                color: Color(0x66BACBB9),
+                fontSize: 10,
+                letterSpacing: 2,
+              ),
             ),
           ],
         ),
