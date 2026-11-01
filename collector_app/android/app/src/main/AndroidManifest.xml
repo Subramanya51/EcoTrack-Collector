@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
+        android:usesCleartextTraffic="true"
         android:label="Eco Dispatch"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"

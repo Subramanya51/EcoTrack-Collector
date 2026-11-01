@@ -14,17 +14,19 @@ class LiveMapScreen extends StatefulWidget {
   State<LiveMapScreen> createState() => _LiveMapScreenState();
 }
 
-class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserver {
+class _LiveMapScreenState extends State<LiveMapScreen>
+    with WidgetsBindingObserver {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   LatLng _currentLocation = const LatLng(37.7749, -122.4194); // Default to SF
   LatLng? _dumpYardLocation; // Will default to _currentLocation for loop route
   StreamSubscription<Position>? _locationSubscription;
+  StreamSubscription<DatabaseEvent>? _pickupSubscription;
   String? _collectorId;
   final AuthService _authService = AuthService();
   final GoogleMapsService _googleMapsService = GoogleMapsService();
-  
+
   String _totalDistance = "";
   String _totalDuration = "";
   List<int> _optimizedOrder = [];
@@ -44,13 +46,15 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     _setOfflineStatus();
     _locationSubscription?.cancel();
+    _pickupSubscription?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       // App is switched or backgrounded
       print('--- App Lifecycle: $state. Setting OFFLINE status. ---');
       _setOfflineStatus();
@@ -66,7 +70,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     try {
       await FirebaseDatabase.instance
           .ref('Collector_Locations/$_collectorId')
-          .update({'status': 'ONLINE'});
+          .update({'status': 'ONLINE', 'timestamp': ServerValue.timestamp});
       print('--- Status set to ONLINE in RTDB for $_collectorId ---');
     } catch (e) {
       print('--- Error setting online status in RTDB: $e ---');
@@ -78,7 +82,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     try {
       await FirebaseDatabase.instance
           .ref('Collector_Locations/$_collectorId')
-          .update({'status': 'OFFLINE'});
+          .update({'status': 'OFFLINE', 'timestamp': ServerValue.timestamp});
       print('--- Status set to OFFLINE in RTDB for $_collectorId ---');
     } catch (e) {
       print('--- Error setting offline status in RTDB: $e ---');
@@ -89,26 +93,31 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     _collectorId = await _authService.getCollectorId();
     if (_collectorId == null) {
       print('--- ERROR: No Collector ID found in SharedPreferences! ---');
-      print('--- ACTION REQUIRED: Please log out and log in again to save your ID. ---');
+      print(
+        '--- ACTION REQUIRED: Please log out and log in again to save your ID. ---',
+      );
       return;
     }
 
-    print('--- SUCCESS: Collector ID "$_collectorId" fetched. Starting stream... ---');
+    print(
+      '--- SUCCESS: Collector ID "$_collectorId" fetched. Starting stream... ---',
+    );
 
     // Subscribe to location updates
-    _locationSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5, // Update every 5 meters
-      ),
-    ).listen((Position position) {
-      if (mounted) {
-        setState(() {
-          _currentLocation = LatLng(position.latitude, position.longitude);
+    _locationSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 5, // Update every 5 meters
+          ),
+        ).listen((Position position) {
+          if (mounted) {
+            setState(() {
+              _currentLocation = LatLng(position.latitude, position.longitude);
+            });
+          }
+          _updateLocationInFirestore(position);
         });
-      }
-      _updateLocationInFirestore(position);
-    });
   }
 
   Future<void> _updateLocationInFirestore(Position position) async {
@@ -120,18 +129,27 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
       print('--- TOKEN EXPIRED during location update. Logging out... ---');
       _authService.logout();
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/login', (route) => false);
       }
       return;
     }
 
     try {
-      print('--- SYNCING TO RTDB: Collector/$_collectorId at (${position.latitude}, ${position.longitude}) ---');
-      final ref = FirebaseDatabase.instance.ref('Collector_Locations/$_collectorId');
-      
+      print(
+        '--- SYNCING TO RTDB: Collector/$_collectorId at (${position.latitude}, ${position.longitude}) ---',
+      );
+      final ref = FirebaseDatabase.instance.ref(
+        'Collector_Locations/$_collectorId',
+      );
+
       // Ensure we set status to OFFLINE if the app is closed/connection lost
-      await ref.onDisconnect().update({'status': 'OFFLINE'});
-      
+      await ref.onDisconnect().update({
+        'status': 'OFFLINE',
+        'timestamp': ServerValue.timestamp,
+      });
+
       await ref.update({
         'collectorId': _collectorId,
         'latitude': position.latitude,
@@ -140,7 +158,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
         'lastUpdated': DateTime.now().toIso8601String(),
         'timestamp': ServerValue.timestamp,
       });
-      
+
       print('--- RTDB UPDATE SUCCESSFUL ---');
     } catch (e) {
       print('--- RTDB UPDATE FAILED: $e ---');
@@ -165,7 +183,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
           return;
         }
       }
-      
+
       if (permission == LocationPermission.deniedForever) {
         print('--- Location Permissions are PERMANENTLY DENIED ---');
         return;
@@ -179,27 +197,33 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
           timeLimit: const Duration(seconds: 30),
         );
       } catch (e) {
-        print('--- GPS Timeout/Error, attempting to use last known location... ---');
+        print(
+          '--- GPS Timeout/Error, attempting to use last known location... ---',
+        );
         position = await Geolocator.getLastKnownPosition();
       }
-      
+
       if (position != null) {
         final pos = position; // Create a non-nullable reference
-        print('--- Current Location Found: ${pos.latitude}, ${pos.longitude} ---');
+        print(
+          '--- Current Location Found: ${pos.latitude}, ${pos.longitude} ---',
+        );
         if (mounted) {
           setState(() {
             _currentLocation = LatLng(pos.latitude, pos.longitude);
           });
-          
+
           _mapController?.animateCamera(
             CameraUpdate.newLatLngZoom(_currentLocation, 14.0),
           );
-          
+
           // Initial sync to RTDB so node appears immediately
           _updateLocationInFirestore(pos);
         }
       } else {
-        print('--- Could not determine location. Falling back to first pickup point... ---');
+        print(
+          '--- Could not determine location. Falling back to first pickup point... ---',
+        );
         if (_markers.isNotEmpty) {
           final firstPickup = _markers.first.position;
           if (mounted) {
@@ -217,65 +241,88 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     }
   }
 
-  void _listenToPickupPoints() {
-    print('--- Listening to pickupRequests in Realtime Database ---');
-    FirebaseDatabase.instance.ref('pickupRequests').onValue.listen((event) {
-      final rawData = event.snapshot.value;
-      if (rawData == null) {
-        print('--- No data found in pickupRequests ---');
-        return;
-      }
+  Future<void> _listenToPickupPoints() async {
+    // City/zone saved at login (from the JWT)
+    final city = await _authService.getCity();
+    final zone = await _authService.getZone();
 
-      print('--- Realtime Database Snapshot Received ---');
-      
-      final Map<dynamic, dynamic> data = (rawData is Map) 
-          ? rawData 
-          : {};
-      
-      final newMarkers = <Marker>{};
+    print('--- Listening to pickupRequests (city: $city, zone: $zone) ---');
 
-      data.forEach((key, value) {
-        if (value is Map) {
-          if (value['status'] == "COMPLETED") {
-            return;
+    // Only this collector's city, filtered by Firebase (needs ".indexOn": ["city"] in the rules)
+    Query query = FirebaseDatabase.instance.ref('pickupRequests');
+    if (city != null) query = query.orderByChild('city').equalTo(city);
+
+    _pickupSubscription = query.onValue.listen(
+      (event) {
+        final rawData = event.snapshot.value;
+
+        // No early return on empty data: the map must clear when the last pickup closes
+        final Map<dynamic, dynamic> data = (rawData is Map) ? rawData : {};
+
+        final newMarkers = <Marker>{};
+
+        data.forEach((key, value) {
+          if (value is Map) {
+            // Show only open requests: hides COMPLETED (picked up) and FAILED (not picked up)
+            final status = value['status'];
+            if (status != 'REQUESTED' && status != 'IN_PROGRESS') {
+              return;
+            }
+
+            // A zone collector sees only their zone; a city-wide collector (zone == null) sees all
+            if (zone != null && value['zone'] != zone) {
+              return;
+            }
+
+            try {
+              final lat = (value['latitude'] as num).toDouble();
+              final lng = (value['longitude'] as num).toDouble();
+
+              newMarkers.add(
+                Marker(
+                  markerId: MarkerId(key.toString()),
+                  position: LatLng(lat, lng),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueGreen,
+                  ),
+                  infoWindow: InfoWindow(
+                    title: 'Pickup Point',
+                    snippet: 'ID: $key',
+                  ),
+                ),
+              );
+            } catch (e) {
+              print('--- Error parsing RTDB record $key: $e ---');
+            }
           }
-
-          try {
-            final lat = (value['latitude'] as num).toDouble();
-            final lng = (value['longitude'] as num).toDouble();
-            
-            newMarkers.add(Marker(
-              markerId: MarkerId(key.toString()),
-              position: LatLng(lat, lng),
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-              infoWindow: InfoWindow(title: 'Pickup Point', snippet: 'ID: $key'),
-            ));
-          } catch (e) {
-            print('--- Error parsing RTDB record $key: $e ---');
-          }
-        }
-      });
-
-      if (mounted) {
-        setState(() {
-          // Preserve origin and destination markers if they already exist
-          final originMarker = _markers.where((m) => m.markerId.value == 'origin').firstOrNull;
-          final destMarker = _markers.where((m) => m.markerId.value == 'destination').firstOrNull;
-          
-          _markers = newMarkers;
-          
-          if (originMarker != null) _markers.add(originMarker);
-          if (destMarker != null) _markers.add(destMarker);
         });
-        
-        // Auto-zoom to markers if we are stuck at default location
-        if (_markers.isNotEmpty) {
-          _zoomToFitMarkers();
+
+        if (mounted) {
+          setState(() {
+            // Preserve origin and destination markers if they already exist
+            final originMarker = _markers
+                .where((m) => m.markerId.value == 'origin')
+                .firstOrNull;
+            final destMarker = _markers
+                .where((m) => m.markerId.value == 'destination')
+                .firstOrNull;
+
+            _markers = newMarkers;
+
+            if (originMarker != null) _markers.add(originMarker);
+            if (destMarker != null) _markers.add(destMarker);
+          });
+
+          // Auto-zoom to markers if we are stuck at default location
+          if (_markers.isNotEmpty) {
+            _zoomToFitMarkers();
+          }
         }
-      }
-    }, onError: (error) {
-      print('--- Realtime Database Error: $error ---');
-    });
+      },
+      onError: (error) {
+        print('--- Realtime Database Error: $error ---');
+      },
+    );
   }
 
   Future<void> _optimizeRoute() async {
@@ -287,9 +334,14 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     }
 
     // Check if we are still at default location (SF) while likely being elsewhere
-    if (_currentLocation.latitude == 37.7749 && _currentLocation.longitude == -122.4194) {
+    if (_currentLocation.latitude == 37.7749 &&
+        _currentLocation.longitude == -122.4194) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Waiting for GPS location... Please try again in a moment.')),
+        const SnackBar(
+          content: Text(
+            'Waiting for GPS location... Please try again in a moment.',
+          ),
+        ),
       );
       _initLocation();
       return;
@@ -298,15 +350,21 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
     final destination = _dumpYardLocation ?? _currentLocation;
 
     final List<LatLng> waypointLatLngs = _markers
-        .where((m) => m.markerId.value != 'origin' && m.markerId.value != 'destination')
+        .where(
+          (m) =>
+              m.markerId.value != 'origin' && m.markerId.value != 'destination',
+        )
         .map((m) => m.position)
         .toList();
 
-    if (waypointLatLngs.length > 23) { // 23 waypoints + origin + destination = 25 total (Standard API limit)
+    if (waypointLatLngs.length > 23) {
+      // 23 waypoints + origin + destination = 25 total (Standard API limit)
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Too many pickup points (limit 23 for one route)')),
+        const SnackBar(
+          content: Text('Too many pickup points (limit 23 for one route)'),
+        ),
       );
-      // Optional: split into multiple routes as per requirement, 
+      // Optional: split into multiple routes as per requirement,
       // but the user said "Do not create multiple separate routes. Always generate one optimized route."
       // So I'll just warn and proceed with the first 23.
     }
@@ -324,8 +382,10 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
       if (result != null) {
         final route = result['routes'][0];
         final overviewPolyline = route['overview_polyline']['points'];
-        final List<LatLng> polylinePoints = _googleMapsService.decodePolyline(overviewPolyline);
-        
+        final List<LatLng> polylinePoints = _googleMapsService.decodePolyline(
+          overviewPolyline,
+        );
+
         // Waypoint order gives us the sequence (0-indexed based on the waypoints list we sent)
         final List<dynamic> order = route['waypoint_order'];
 
@@ -342,7 +402,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
           _totalDistance = "${(totalDist / 1000).toStringAsFixed(1)} km";
           _totalDuration = "${(totalDur / 60).toStringAsFixed(0)} mins";
           _optimizedOrder = order.cast<int>();
-          
+
           _polylines = {
             Polyline(
               polylineId: const PolylineId('optimized_route'),
@@ -353,19 +413,29 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
           };
 
           // Update markers to include origin and destination if not already there
-          _markers.add(Marker(
-            markerId: const MarkerId('origin'),
-            position: _currentLocation,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-            infoWindow: const InfoWindow(title: 'Start Location (Truck)'),
-          ));
-          
-          _markers.add(Marker(
-            markerId: const MarkerId('destination'),
-            position: destination,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-            infoWindow: const InfoWindow(title: 'Final Destination (Dump Yard)'),
-          ));
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('origin'),
+              position: _currentLocation,
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueAzure,
+              ),
+              infoWindow: const InfoWindow(title: 'Start Location (Truck)'),
+            ),
+          );
+
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('destination'),
+              position: destination,
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueRed,
+              ),
+              infoWindow: const InfoWindow(
+                title: 'Final Destination (Dump Yard)',
+              ),
+            ),
+          );
         });
 
         _zoomToFitAll(destination);
@@ -385,7 +455,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
 
   void _zoomToFitAll(LatLng destination) {
     if (_markers.isEmpty || _mapController == null) return;
-    
+
     double minLat = _currentLocation.latitude;
     double maxLat = _currentLocation.latitude;
     double minLng = _currentLocation.longitude;
@@ -397,7 +467,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
       if (m.position.longitude < minLng) minLng = m.position.longitude;
       if (m.position.longitude > maxLng) maxLng = m.position.longitude;
     }
-    
+
     // Include destination
     if (destination.latitude < minLat) minLat = destination.latitude;
     if (destination.latitude > maxLat) maxLat = destination.latitude;
@@ -417,7 +487,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
 
   void _zoomToFitMarkers() {
     if (_markers.isEmpty || _mapController == null) return;
-    
+
     double minLat = _markers.first.position.latitude;
     double maxLat = _markers.first.position.latitude;
     double minLng = _markers.first.position.longitude;
@@ -468,10 +538,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
 
           // Top header
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
               color: const Color(0xFF071325),
-              padding: EdgeInsets.only(top: topPad, bottom: 16, left: 24, right: 24),
+              padding: EdgeInsets.only(
+                top: topPad,
+                bottom: 16,
+                left: 24,
+                right: 24,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -481,18 +558,36 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
                       SizedBox(width: 12),
                       Text(
                         'ECO DISPATCH',
-                        style: TextStyle(color: Color(0xFF00E676), fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 3),
+                        style: TextStyle(
+                          color: Color(0xFF00E676),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 3,
+                        ),
                       ),
                     ],
                   ),
                   Row(
                     children: [
                       const SizedBox(
-                        width: 8, height: 8,
-                        child: DecoratedBox(decoration: BoxDecoration(color: Color(0xFF00E676), shape: BoxShape.circle)),
+                        width: 8,
+                        height: 8,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color(0xFF00E676),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      const Text('ONLINE', style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold, fontSize: 12)),
+                      const Text(
+                        'ONLINE',
+                        style: TextStyle(
+                          color: Color(0xFF00E676),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       Material(
                         color: const Color(0x801F2A3D),
@@ -501,8 +596,13 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
                           borderRadius: BorderRadius.circular(28),
                           onTap: () => Navigator.pushNamed(context, '/profile'),
                           child: const SizedBox(
-                            width: 56, height: 56,
-                            child: Icon(Icons.account_circle, color: Color(0xFF00E676), size: 32),
+                            width: 56,
+                            height: 56,
+                            child: Icon(
+                              Icons.account_circle,
+                              color: Color(0xFF00E676),
+                              size: 32,
+                            ),
                           ),
                         ),
                       ),
@@ -524,7 +624,9 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
                 decoration: BoxDecoration(
                   color: const Color(0xFF071325).withOpacity(0.9),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3)),
+                  border: Border.all(
+                    color: const Color(0xFF00E676).withOpacity(0.3),
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.5),
@@ -536,11 +638,23 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildRouteStat(Icons.straighten, 'Distance', _totalDistance),
+                    _buildRouteStat(
+                      Icons.straighten,
+                      'Distance',
+                      _totalDistance,
+                    ),
                     Container(width: 1, height: 40, color: Colors.white24),
-                    _buildRouteStat(Icons.access_time, 'Est. Time', _totalDuration),
+                    _buildRouteStat(
+                      Icons.access_time,
+                      'Est. Time',
+                      _totalDuration,
+                    ),
                     Container(width: 1, height: 40, color: Colors.white24),
-                    _buildRouteStat(Icons.location_on, 'Pickups', '${_markers.length - 2}'),
+                    _buildRouteStat(
+                      Icons.location_on,
+                      'Pickups',
+                      '${_markers.length - 2}',
+                    ),
                   ],
                 ),
               ),
@@ -557,24 +671,40 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
                 decoration: BoxDecoration(
                   color: const Color(0xFF071325).withOpacity(0.8),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF00E676).withOpacity(0.2)),
+                  border: Border.all(
+                    color: const Color(0xFF00E676).withOpacity(0.2),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Padding(
                       padding: EdgeInsets.only(left: 12, top: 8, bottom: 4),
-                      child: Text('OPTIMIZED SEQUENCE', style: TextStyle(color: Color(0xFF00E676), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      child: Text(
+                        'OPTIMIZED SEQUENCE',
+                        style: TextStyle(
+                          color: Color(0xFF00E676),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
                     ),
                     Expanded(
                       child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         scrollDirection: Axis.horizontal,
                         itemCount: _optimizedOrder.length,
                         itemBuilder: (context, index) {
                           return Container(
                             margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.05),
                               borderRadius: BorderRadius.circular(8),
@@ -584,10 +714,23 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
                                 CircleAvatar(
                                   radius: 10,
                                   backgroundColor: const Color(0xFF00E676),
-                                  child: Text('${index + 1}', style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text('Stop ${_optimizedOrder[index] + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                Text(
+                                  'Stop ${_optimizedOrder[index] + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -599,16 +742,18 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
               ),
             ),
 
-
           // Bottom bar
           Positioned(
-            bottom: 0, left: 0, right: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: Container(
               height: 48,
               color: const Color(0xFF071325),
               alignment: Alignment.center,
               child: Container(
-                width: 96, height: 4,
+                width: 96,
+                height: 4,
                 decoration: BoxDecoration(
                   color: colors.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(2),
@@ -640,7 +785,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> with WidgetsBindingObserv
         ),
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );

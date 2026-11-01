@@ -5,7 +5,10 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
 class AuthService {
-  static const String baseUrl = 'https://ecotrack-rm92.onrender.com';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8080',
+  );
   static const String loginPath = '/collector/login';
 
   Future<Map<String, dynamic>> login(
@@ -132,5 +135,25 @@ class AuthService {
       print('Error decoding token: $e');
       return false;
     }
+  }
+
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    final collectorId = prefs.getString('collector_id');
+
+    if (collectorId != null) {
+      try {
+        await FirebaseDatabase.instance
+            .ref('Collector_Locations/$collectorId')
+            .update({'status': 'OFFLINE', 'timestamp': ServerValue.timestamp});
+      } catch (e) {
+        print('Error setting offline status on logout: $e');
+      }
+    }
+
+    await prefs.remove('jwt_token');
+    await prefs.remove('collector_id');
+    await prefs.remove('city');
+    await prefs.remove('zone');
   }
 }
